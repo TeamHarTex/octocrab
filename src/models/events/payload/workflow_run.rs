@@ -22,6 +22,7 @@ pub struct WorkflowRunEventPayload {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum WorkflowRunEventAction {
+    InProgress,
     Requested,
     Completed,
 }
