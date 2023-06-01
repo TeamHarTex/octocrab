@@ -83,6 +83,18 @@ pub struct PullRequest {
     pub draft: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repo: Option<Box<Repository>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub additions: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deletions: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub changed_files: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub commits: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub review_comments: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comments: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -233,7 +245,7 @@ pub enum ReviewState {
 #[non_exhaustive]
 pub struct Comment {
     pub url: Url,
-    pub pull_request_review_id: ReviewId,
+    pub pull_request_review_id: Option<ReviewId>,
     pub id: CommentId,
     pub node_id: String,
     pub diff_hunk: String,
