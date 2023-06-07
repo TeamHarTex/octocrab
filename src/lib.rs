@@ -489,6 +489,12 @@ impl OctocrabBuilder<NoSvc, DefaultOctocrabBuilderConfig, NoAuth, NotLayerReady>
         self
     }
 
+    /// Authenticate with a user access token.
+    pub fn user_access_token(mut self, token: String) -> Self {
+        self.config.auth = Auth::UserAccessToken(SecretString::new(token));
+        self
+    }
+
     /// Set the base url for `Octocrab`.
     pub fn base_uri(mut self, base_uri: impl TryInto<Uri>) -> Result<Self> {
         self.config.base_uri = Some(
@@ -533,11 +539,18 @@ impl OctocrabBuilder<NoSvc, DefaultOctocrabBuilderConfig, NoAuth, NotLayerReady>
             let mut connector = HttpConnector::new();
 
             #[cfg(all(feature = "rustls", not(feature = "opentls")))]
-            let connector = HttpsConnectorBuilder::new()
-                .with_native_roots() // enabled the `rustls-native-certs` feature in hyper-rustls
-                .https_or_http() //  Disable .https_only() during tests until: https://github.com/LukeMathWalker/wiremock-rs/issues/58 is resolved. Alternatively we can use conditional compilation to only enable this feature in tests, but it becomes rather ugly with integration tests.
-                .enable_http1()
-                .build();
+            let connector = {
+                let builder = HttpsConnectorBuilder::new();
+                #[cfg(all(feature = "rustls-webpki-tokio"))]
+                let builder = builder.with_webpki_roots();
+                #[cfg(all(not(feature = "rustls-webpki-tokio")))]
+                let builder = builder.with_native_roots(); // enabled the `rustls-native-certs` feature in hyper-rustls
+
+                builder
+                    .https_or_http() //  Disable .https_only() during tests until: https://github.com/LukeMathWalker/wiremock-rs/issues/58 is resolved. Alternatively we can use conditional compilation to only enable this feature in tests, but it becomes rather ugly with integration tests.
+                    .enable_http1()
+                    .build()
+            };
 
             #[cfg(all(feature = "opentls", not(feature = "rustls")))]
             let connector = HttpsConnector::new();
@@ -618,6 +631,13 @@ impl OctocrabBuilder<NoSvc, DefaultOctocrabBuilderConfig, NoAuth, NotLayerReady>
             Auth::None => AuthState::None,
             Auth::Basic { username, password } => AuthState::BasicAuth { username, password },
             Auth::PersonalToken(token) => {
+                hmap.push((
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", token.expose_secret()).parse().unwrap(),
+                ));
+                AuthState::None
+            }
+            Auth::UserAccessToken(token) => {
                 hmap.push((
                     http::header::AUTHORIZATION,
                     format!("Bearer {}", token.expose_secret()).parse().unwrap(),
