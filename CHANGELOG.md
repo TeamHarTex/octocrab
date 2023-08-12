@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.1](https://github.com/XAMPPRocky/octocrab/compare/v0.29.0...v0.29.1) - 2023-07-31
+
+### Other
+- Make models::webhook_events::payload public
+
+## [0.29.0](https://github.com/XAMPPRocky/octocrab/compare/v0.28.0...v0.29.0) - 2023-07-30
+
+### Other
+- Add webhook event deserialization ([#427](https://github.com/XAMPPRocky/octocrab/pull/427))
+- Update changelog for v0.28.0 ([#428](https://github.com/XAMPPRocky/octocrab/pull/428))
+- Add associated pull requests and commit compare functionality  ([#413](https://github.com/XAMPPRocky/octocrab/pull/413))
+- Fix clippy 1.71 warnings ([#424](https://github.com/XAMPPRocky/octocrab/pull/424))
+
+## [0.28.0](https://github.com/XAMPPRocky/octocrab/compare/v0.27.0...v0.28.0) - 2023-07-19
+
+### Other
+
+- Handle errors when kicking off github workflows ([#409](https://github.com/XAMPPRocky/octocrab/pull/409))
+- Update license field following https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields ([#412](https://github.com/XAMPPRocky/octocrab/pull/416))
+- cargo clippy --tests ([#416](https://github.com/XAMPPRocky/octocrab/pull/416))
+- Improve workflow job types ([#414](https://github.com/XAMPPRocky/octocrab/pull/416))
+- Fix graphql example ([#404](https://github.com/XAMPPRocky/octocrab/pull/404))
+
+## [0.27.0](https://github.com/XAMPPRocky/octocrab/compare/v0.26.0...v0.26.1) - 2023-07-18
+
+### Other
+- Handle errors when kicking off github workflows ([#409](https://github.com/XAMPPRocky/octocrab/pull/409))
+- Update license field following https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields ([#412](https://github.com/XAMPPRocky/octocrab/pull/412))
+- cargo clippy --tests ([#416](https://github.com/XAMPPRocky/octocrab/pull/416))
+- Improve workflow job types  ([#414](https://github.com/XAMPPRocky/octocrab/pull/414))
+- Fix graphql example ([#404](https://github.com/XAMPPRocky/octocrab/pull/404))
+
 ## [0.25.1](https://github.com/XAMPPRocky/octocrab/compare/v0.25.0...v0.25.1) - 2023-06-06
 
 ### Other
@@ -77,8 +109,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix typo in POST /gists endpoint (#327)
 - Update hyper-rustls requirement from 0.23.2 to 0.24.0 (#324)
 - Percent encode label name in remove_label to avoid InvalidUri(InvalidUriChar) error (#323)
-- Update CHANGELOG.md
-- Update CHANGELOG.md
 
 ## [0.20.0-alpha.1](https://github.com/XAMPPRocky/octocrab/compare/v0.20.0-alpha.0...v0.20.0-alpha.1) - 2023-03-31
 

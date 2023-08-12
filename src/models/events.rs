@@ -1,6 +1,6 @@
 pub mod payload;
 
-use crate::models::events::payload::EventInstallationPayload;
+use crate::models::events::payload::EventInstallation;
 
 use self::payload::{
     CommitCommentEventPayload, CreateEventPayload, DeleteEventPayload, EventPayload,
@@ -139,7 +139,7 @@ impl<'de> Deserialize<'de> for Event {
         }
         #[derive(Deserialize)]
         struct IntermediatePayload {
-            installation: Option<EventInstallationPayload>,
+            installation: Option<EventInstallation>,
             organization: Option<crate::models::orgs::Organization>,
             repository: Option<crate::models::Repository>,
             sender: Option<crate::models::Author>,
@@ -230,8 +230,13 @@ mod test {
         let event: Event = serde_json::from_str(json).unwrap();
         assert_eq!(event.r#type, EventType::WorkflowRunEvent);
         assert_eq!(
-            event.payload.unwrap().installation.unwrap().id,
-            crate::models::InstallationId(18995746)
+            event.payload.unwrap().installation.unwrap(),
+            crate::models::events::payload::EventInstallation::Minimal(Box::new(
+                crate::models::events::payload::EventInstallationId {
+                    id: 18995746.into(),
+                    node_id: "MDIzOkludGVncmF0aW9uSW5zdGFsbGF0aW9uMTg5OTU3NDY=".to_string()
+                }
+            ))
         )
     }
 
