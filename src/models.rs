@@ -25,6 +25,8 @@ pub mod timelines;
 pub mod webhook_events;
 pub mod workflows;
 
+mod date_serde;
+
 pub use apps::App;
 
 type BaseIdType = u64;
@@ -621,11 +623,23 @@ pub struct Repository {
     pub disabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub visibility: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "date_serde::deserialize_opt"
+    )]
     pub pushed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "date_serde::deserialize_opt"
+    )]
     pub created_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "date_serde::deserialize_opt"
+    )]
     pub updated_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permissions: Option<Permissions>,
@@ -839,11 +853,28 @@ pub struct Installation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_type: Option<String>,
     pub permissions: InstallationPermissions,
+    /// List of events in the installation.
+    ///
+    /// Note that for Webhook events, the list of events in the
+    /// list is guaranteed to match variants from
+    /// [WebhookEventType](webhook_events::WebhookEventType)
     pub events: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub single_file_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository_selection: Option<String>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "date_serde::deserialize_opt"
+    )]
+    pub created_at: Option<DateTime<Utc>>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "date_serde::deserialize_opt"
+    )]
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]

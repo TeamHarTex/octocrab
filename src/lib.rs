@@ -19,12 +19,14 @@
 //! - [`licenses`] License Metadata.
 //! - [`markdown`] Rendering Markdown with GitHub
 //! - [`orgs`] GitHub Organisations
+//! - [`projects`] GitHub Projects
 //! - [`pulls`] Pull Requests
 //! - [`repos`] Repositories
 //! - [`repos::forks`] Repositories
 //! - [`repos::releases`] Repositories
 //! - [`search`] Using GitHub's search.
 //! - [`teams`] Teams
+//! - [`users`] Users
 //!
 //! #### Getting a Pull Request
 //! ```no_run
@@ -190,6 +192,7 @@ pub mod params;
 pub mod service;
 use crate::service::body::BodyStreamExt;
 
+use chrono::{DateTime, Utc};
 use http::{HeaderMap, HeaderValue, Method, Uri};
 use std::convert::{Infallible, TryInto};
 use std::fmt;
@@ -244,13 +247,14 @@ use crate::service::middleware::extra_headers::ExtraHeadersLayer;
 #[cfg(feature = "retry")]
 use crate::service::middleware::retry::RetryConfig;
 
+use crate::api::users;
 use auth::{AppAuth, Auth};
 use models::{AppId, InstallationId, InstallationToken};
 
 pub use self::{
     api::{
         actions, activity, apps, checks, commits, current, events, gists, gitignore, issues,
-        licenses, markdown, orgs, pulls, ratelimit, repos, search, teams, workflows,
+        licenses, markdown, orgs, projects, pulls, ratelimit, repos, search, teams, workflows,
     },
     error::{Error, GitHubError},
     from_response::FromResponse,
@@ -645,6 +649,9 @@ impl OctocrabBuilder<NoSvc, DefaultOctocrabBuilderConfig, NoAuth, NotLayerReady>
             )
             .layer(client);
 
+        #[cfg(feature = "follow-redirect")]
+        let client = tower_http::follow_redirect::FollowRedirectLayer::new().layer(client);
+
         let mut hmap: Vec<(HeaderName, HeaderValue)> = vec![];
 
         // Add the user agent header required by GitHub
@@ -760,18 +767,54 @@ impl DefaultOctocrabBuilderConfig {
 
 pub type DynBody = dyn http_body::Body<Data = Bytes, Error = BoxError> + Send + Unpin;
 
+#[derive(Debug, Clone)]
+struct CachedTokenInner {
+    expiration: Option<DateTime<Utc>>,
+    secret: SecretString,
+}
+
+impl CachedTokenInner {
+    fn new(secret: SecretString, expiration: Option<DateTime<Utc>>) -> Self {
+        Self { secret, expiration }
+    }
+
+    fn expose_secret(&self) -> &str {
+        self.secret.expose_secret()
+    }
+}
+
 /// A cached API access token (which may be None)
-pub struct CachedToken(RwLock<Option<SecretString>>);
+pub struct CachedToken(RwLock<Option<CachedTokenInner>>);
 
 impl CachedToken {
     fn clear(&self) {
         *self.0.write().unwrap() = None;
     }
-    fn get(&self) -> Option<SecretString> {
-        self.0.read().unwrap().clone()
+
+    /// Returns a valid token if it exists and is not expired or if there is no expiration date.
+    fn valid_token_with_buffer(&self, buffer: chrono::Duration) -> Option<SecretString> {
+        let inner = self.0.read().unwrap();
+
+        if let Some(token) = inner.as_ref() {
+            if let Some(exp) = token.expiration {
+                if exp - Utc::now() > buffer {
+                    return Some(token.secret.clone());
+                }
+            } else {
+                return Some(token.secret.clone());
+            }
+        }
+
+        None
     }
-    fn set(&self, value: String) {
-        *self.0.write().unwrap() = Some(SecretString::new(value));
+
+    fn valid_token(&self) -> Option<SecretString> {
+        self.valid_token_with_buffer(chrono::Duration::seconds(30))
+    }
+
+    fn set(&self, token: String, expiration: Option<DateTime<Utc>>) {
+        *self.0.write().unwrap() =
+            Some(CachedTokenInner::new(SecretString::new(token), expiration));
     }
 }
 
@@ -1009,6 +1052,12 @@ impl Octocrab {
         repos::RepoHandler::new(self, owner.into(), repo.into())
     }
 
+    /// Creates a [`projects::ProjectHandler`] that allows you to access GitHub's
+    /// projects API (classic).
+    pub fn projects(&self) -> projects::ProjectHandler {
+        projects::ProjectHandler::new(self)
+    }
+
     /// Creates a [`search::SearchHandler`] that allows you to construct general queries
     /// to GitHub's API.
     pub fn search(&self) -> search::SearchHandler {
@@ -1019,6 +1068,11 @@ impl Octocrab {
     /// you to access GitHub's teams API.
     pub fn teams(&self, owner: impl Into<String>) -> teams::TeamHandler {
         teams::TeamHandler::new(self, owner.into())
+    }
+
+    /// Creates a [`users::UserHandler`] for the specified user
+    pub fn users(&self, user: impl Into<String>) -> users::UserHandler {
+        users::UserHandler::new(self, user.into())
     }
 
     /// Creates a [`workflows::WorkflowsHandler`] for the specified repository that allows
@@ -1349,7 +1403,22 @@ impl Octocrab {
 
         let token_object =
             InstallationToken::from_response(crate::map_github_error(response).await?).await?;
-        token.set(token_object.token.clone());
+
+        let expiration = token_object
+            .expires_at
+            .map(|time| {
+                DateTime::<Utc>::from_str(&time).map_err(|e| error::Error::Other {
+                    source: Box::new(e),
+                    backtrace: snafu::Backtrace::generate(),
+                })
+            })
+            .transpose()?;
+
+        #[cfg(feature = "tracing")]
+        tracing::debug!("Token expires at: {:?}", expiration);
+
+        token.set(token_object.token.clone(), expiration);
+
         Ok(SecretString::new(token_object.token))
     }
 
@@ -1407,7 +1476,7 @@ impl Octocrab {
                 Some(HeaderValue::from_bytes(&buf).expect("base64 is always valid HeaderValue"))
             }
             AuthState::Installation { ref token, .. } => {
-                let token = if let Some(token) = token.get() {
+                let token = if let Some(token) = token.valid_token() {
                     token
                 } else {
                     self.request_installation_auth_token().await?
@@ -1522,5 +1591,58 @@ mod tests {
             .send()
             .await
             .unwrap();
+    }
+
+    use super::*;
+    use chrono::Duration;
+
+    #[test]
+    fn clear_token() {
+        let cache = CachedToken(RwLock::new(None));
+        cache.set("secret".to_string(), None);
+        cache.clear();
+
+        assert!(cache.valid_token().is_none(), "Token was not cleared.");
+    }
+
+    #[test]
+    fn no_token_when_expired() {
+        let cache = CachedToken(RwLock::new(None));
+        let expiration = Utc::now() + Duration::seconds(9);
+        cache.set("secret".to_string(), Some(expiration));
+
+        assert!(
+            cache
+                .valid_token_with_buffer(Duration::seconds(10))
+                .is_none(),
+            "Token should be considered expired due to buffer."
+        );
+    }
+
+    #[test]
+    fn get_valid_token_outside_buffer() {
+        let cache = CachedToken(RwLock::new(None));
+        let expiration = Utc::now() + Duration::seconds(12);
+        cache.set("secret".to_string(), Some(expiration));
+
+        assert!(
+            cache
+                .valid_token_with_buffer(Duration::seconds(10))
+                .is_some(),
+            "Token should still be valid outside of buffer."
+        );
+    }
+
+    #[test]
+    fn get_valid_token_without_expiration() {
+        let cache = CachedToken(RwLock::new(None));
+        cache.set("secret".to_string(), None);
+
+        assert!(
+            cache
+                .valid_token_with_buffer(Duration::seconds(10))
+                .is_some(),
+            "Token with no expiration should always be considered valid."
+        );
     }
 }

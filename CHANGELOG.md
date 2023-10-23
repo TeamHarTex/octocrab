@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.2](https://github.com/XAMPPRocky/octocrab/compare/v0.31.1...v0.31.2) - 2023-10-15
+
+### Other
+- Add `follow-redirect` feature ([#469](https://github.com/XAMPPRocky/octocrab/pull/469))
+
+## [0.31.1](https://github.com/XAMPPRocky/octocrab/compare/v0.31.0...v0.31.1) - 2023-10-08
+
+### Other
+- add get_readme for RepoHandler ([#465](https://github.com/XAMPPRocky/octocrab/pull/465))
+
+## [0.31.0](https://github.com/XAMPPRocky/octocrab/compare/v0.30.1...v0.31.0) - 2023-10-02
+
+### Other
+- Add WatchEvent ([#462](https://github.com/XAMPPRocky/octocrab/pull/462))
+- Checks API ([#461](https://github.com/XAMPPRocky/octocrab/pull/461))
+- Fix `github_app_authentication.rs` ([#458](https://github.com/XAMPPRocky/octocrab/pull/458))
+
+## [0.30.1](https://github.com/XAMPPRocky/octocrab/compare/v0.30.0...v0.30.1) - 2023-09-04
+
+### Other
+- add tracing debug only when tracing feature is enabled ([#454](https://github.com/XAMPPRocky/octocrab/pull/454))
+
+## [0.30.0](https://github.com/XAMPPRocky/octocrab/compare/v0.29.3...v0.30.0) - 2023-09-01
+
+### Other
+- Fix commit_comment webhook event parsing ([#453](https://github.com/XAMPPRocky/octocrab/pull/453))
+- Add Octocrab::users() and UsersHandler::repos ([#451](https://github.com/XAMPPRocky/octocrab/pull/451))
+- Add CommitHandler::associated_check_runs ([#450](https://github.com/XAMPPRocky/octocrab/pull/450))
+- Fix installation token cache issue ([#442](https://github.com/XAMPPRocky/octocrab/pull/442))
+- Add projects Api ([#447](https://github.com/XAMPPRocky/octocrab/pull/447))
+- Enhance installation webhook events
+- Add test for push webhook event
+- Implement custom deserialization for hybrid Github API timestamps
+- Make webhook_events deserialization tests more robust
+
 ## [0.29.3](https://github.com/XAMPPRocky/octocrab/compare/v0.29.2...v0.29.3) - 2023-08-15
 
 ### Other
