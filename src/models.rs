@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use serde::{de, Deserialize, Deserializer, Serialize};
 use url::Url;
 
+pub mod actions;
 pub mod activity;
 pub mod apps;
 pub mod checks;
@@ -123,6 +124,9 @@ id_type!(
     RepositoryId,
     ReviewId,
     RunId,
+    RunnerId,
+    RunnerGroupId,
+    RunnerLabelId,
     StatusId,
     TeamId,
     TimelineEventId,
@@ -177,6 +181,10 @@ pub enum Event {
     AddedToProject,
     /// The issue or pull request was assigned to a user.
     Assigned,
+    /// Auto merge was disabled for a pull request.
+    AutoMergeDisabled,
+    /// Auto merge was enabled for a pull request.
+    AutoMergeEnabled,
     /// GitHub unsuccessfully attempted to automatically change the base branch of the pull request.
     AutomaticBaseChangeFailed,
     /// GitHub successfully attempted to automatically change the base branch of the pull request.
